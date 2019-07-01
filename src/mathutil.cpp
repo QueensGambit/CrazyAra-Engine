@@ -12,12 +12,16 @@
  * Created on 01.07.2019
  * @author: queensgambit
  *
- * Please describe what the content of this file is about
+ * Additional plain C++ math utility functions.
  */
 
 #include "mathutil.h"
 
-MathUtil::MathUtil()
+unsigned int log2I(unsigned int value)
 {
-
+    int logValue = 0;
+    while (value >>= 1) {
+        ++logValue;
+    }
+    return logValue;
 }

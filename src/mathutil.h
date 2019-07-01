@@ -11,18 +11,16 @@
  * @file: mathutil.h
  * Created on 01.07.2019
  * @author: queensgambit
- *
- * Please describe what the content of this file is about
  */
 
 #ifndef MATHUTIL_H
 #define MATHUTIL_H
 
-
-class MathUtil
-{
-public:
-    MathUtil();
-};
+/**
+ * @brief log2I Calculates the logarithm dualis of an integer using an integer cast
+ * @param value Value for which to calculate log2
+ * @return
+ */
+unsigned int log2I(unsigned int value);
 
 #endif // MATHUTIL_H

@@ -200,7 +200,7 @@ void SearchThread::thread_iteration()
 {
     create_mini_batch();
 //        cout << "predict" << endl;k
-    netBatch->predict(inputPlanes, valueOutputs, probOutputs);
+    netBatch->predict(inputPlanes, newNodes.size(), valueOutputs, probOutputs);
 //        cout << "set NN result to childs" << endl;
     set_NN_results_to_child_nodes();
 //        cout << "backup values" << endl;

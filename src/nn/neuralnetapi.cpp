@@ -21,6 +21,8 @@
 #include <dirent.h>
 #include <exception>
 #include <string>
+#include <math.h>
+#include "mathutil.h"
 
 // http://www.codebind.com/cpp-tutorial/cpp-program-list-files-directory-windows-linux/
 namespace {
@@ -75,26 +77,28 @@ void NeuralNetAPI::loadParameters(const std::string& paramterFilePath) {
 void NeuralNetAPI::bindExecutor() //Shape *input_shape_single, Executor* executor_single)
 {
     // Create an executor after binding the model to input parameters.
-    args_map["data"] = NDArray(input_shape, global_ctx, false);
-    /* new */
-    std::vector<NDArray> arg_arrays;
-    std::vector<NDArray> grad_arrays;
-    std::vector<OpReqType> grad_reqs;
-    std::vector<NDArray> aux_arrays;
+    for (size_t i = 0; i < numExecutors; ++i) {
+    args_map["data"] = NDArray(input_shapes[i], global_ctx, false);
+        /* new */
+        std::vector<NDArray> arg_arrays;
+        std::vector<NDArray> grad_arrays;
+        std::vector<OpReqType> grad_reqs;
+        std::vector<NDArray> aux_arrays;
 
-    net.InferExecutorArrays(global_ctx, &arg_arrays, &grad_arrays, &grad_reqs,
-                            &aux_arrays, args_map, std::map<std::string, NDArray>(),
-                            std::map<std::string, OpReqType>(), aux_map);
-    for (size_t i = 0; i < grad_reqs.size(); ++i) {
-        grad_reqs[i] = kNullOp;
+        net.InferExecutorArrays(global_ctx, &arg_arrays, &grad_arrays, &grad_reqs,
+                                &aux_arrays, args_map, std::map<std::string, NDArray>(),
+                                std::map<std::string, OpReqType>(), aux_map);
+        for (size_t i = 0; i < grad_reqs.size(); ++i) {
+            grad_reqs[i] = kNullOp;
+        }
+        executors[i] = net.Bind(global_ctx, arg_arrays, grad_arrays, grad_reqs, aux_arrays,
+                                             std::map<std::string, Context>(), nullptr);
+    //    executor = net.SimpleBind(global_ctx, args_map, std::map<std::string, NDArray>(),
+    //                              std::map<std::string, OpReqType>(), aux_map);
+
+        /*end new */
+        LG << ">>>> Bind successfull! >>>>>>";
     }
-    executor = net.Bind(global_ctx, arg_arrays, grad_arrays, grad_reqs, aux_arrays,
-                                         std::map<std::string, Context>(), nullptr);
-//    executor = net.SimpleBind(global_ctx, args_map, std::map<std::string, NDArray>(),
-//                              std::map<std::string, OpReqType>(), aux_map);
-
-    /*end new */
-    LG << ">>>> Bind successfull! >>>>>>";
 }
 
 NeuralNetAPI::NeuralNetAPI(string ctx, unsigned int batchSize, bool selectPolicyFromPlanes, string modelArchitectureDir, string modelWeightsDir)
@@ -135,8 +139,17 @@ NeuralNetAPI::NeuralNetAPI(string ctx, unsigned int batchSize, bool selectPolicy
 //    const string paramterFilePath = prefix + "params/model-1.32689-0.566-0011.params"; //model-1.19246-0.603-0223.params";
 //    const string paramterFilePath = prefix + "params/model-1.19246-0.603-0223.params";
 
+    numExecutors = log2I(batchSize) + 1;
 
-    input_shape =  Shape(batchSize, NB_CHANNELS_TOTAL, BOARD_HEIGHT, BOARD_WIDTH);
+    executors = new Executor*[numExecutors];
+    input_shapes = new Shape[numExecutors];
+    index_t curBatchSize = 1;
+    for (size_t i = 0; i < numExecutors; ++i) {
+        cout << "curBatchSize: " << curBatchSize << endl;
+        input_shapes[i] = Shape(curBatchSize, NB_CHANNELS_TOTAL, BOARD_HEIGHT, BOARD_WIDTH);
+        curBatchSize <<= 1;
+    }
+
 //    input_shape =  Shape(batchSize, NB_CHANNELS_FULL, BOARD_HEIGHT, BOARD_WIDTH);
 
     loadModel(jsonFilePath);
@@ -145,19 +158,19 @@ NeuralNetAPI::NeuralNetAPI(string ctx, unsigned int batchSize, bool selectPolicy
 //    bindExecutor(&input_shape, executor);
 }
 
-NDArray NeuralNetAPI::predict(float *inputPlanes, float &value)
+NDArray NeuralNetAPI::predict_single(float *inputPlanes, float &value)
 {
     // populates v vector data in a matrix of 1 row and 4 columns
-     NDArray image_data {inputPlanes, input_shape, global_ctx};
+     NDArray image_data {inputPlanes, input_shapes[0], global_ctx};
 
 //    std::cout << "image data" << image_data << std::endl;
-    image_data.CopyTo(&(executor->arg_dict()["data"]));
+    image_data.CopyTo(&(executors[0]->arg_dict()["data"]));
 
     // Run the forward pass.
-    executor->Forward(false);
+    executors[0]->Forward(false);
 
-    auto valueOutput = executor->outputs[0].Copy(Context::cpu());
-    auto probOutputs = executor->outputs[1].Copy(Context::cpu());
+    auto valueOutput = executors[0]->outputs[0].Copy(Context::cpu());
+    auto probOutputs = executors[0]->outputs[1].Copy(Context::cpu());
 
     // Assign the value output to the return paramter
     valueOutput.WaitToRead();
@@ -177,18 +190,21 @@ NDArray NeuralNetAPI::predict(float *inputPlanes, float &value)
     return probOutputs; //best_idx;
 }
 
-void NeuralNetAPI::predict(float *inputPlanes, NDArray &valueOutput, NDArray &probOutputs)
+void NeuralNetAPI::predict(float *inputPlanes, size_t numItems, NDArray &valueOutput, NDArray &probOutputs)
 {
+    size_t executorIdx = size_t(ceil(log2(numItems)));
+    cout << "numItems" << numItems << endl;
+    assert(executorIdx < numExecutors);
 
-    NDArray image_data {inputPlanes, input_shape, global_ctx};
+    NDArray image_data {inputPlanes, input_shapes[executorIdx], global_ctx};
     mtx.lock();
-    image_data.CopyTo(&(executor->arg_dict()["data"]));
+    image_data.CopyTo(&(executors[executorIdx]->arg_dict()["data"]));
 
     // Run the forward pass.
-    executor->Forward(false);
+    executors[executorIdx]->Forward(false);
 
-    valueOutput = executor->outputs[0].Copy(Context::cpu());
-    probOutputs = executor->outputs[1].Copy(Context::cpu());
+    valueOutput = executors[executorIdx]->outputs[0].Copy(Context::cpu());
+    probOutputs = executors[executorIdx]->outputs[1].Copy(Context::cpu());
 
     // Assign the value output to the return paramter
     valueOutput.WaitToRead();

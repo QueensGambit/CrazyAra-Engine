@@ -76,7 +76,7 @@ EvalInfo RawNetAgent::evalute_board_state(const Board &pos)
     float value;
 
 //    net->predict_single(begin(input_planes), valueOutput, probOutputs);
-    NDArray probOutputs = net->predict(begin(input_planes), value);
+    NDArray probOutputs = net->predict_single(begin(input_planes), value);
 
 //    value = valueOutput.At(0, 0);
 //    cout << "value: " << value << endl;
