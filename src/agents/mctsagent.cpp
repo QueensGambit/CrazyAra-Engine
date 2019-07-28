@@ -58,7 +58,7 @@ MCTSAgent::MCTSAgent(NeuralNetAPI *netSingle, NeuralNetAPI** netBatches,
     hashTable->reserve(1e6);
 
     for (auto i = 0; i < searchSettings->threads; ++i) {
-        searchThreads.push_back(new SearchThread(netBatches[i], searchSettings, hashTable));
+        searchThreads.push_back(new SearchThread(netBatches[i], searchSettings, hashTable, i));
     }
 
     valueOutput = new NDArray(Shape(1, 1), Context::cpu());
@@ -243,6 +243,8 @@ void MCTSAgent::evalute_board_state(Board *pos, EvalInfo& evalInfo)
 void MCTSAgent::run_mcts_search()
 {
     thread** threads = new thread*[searchSettings->threads];
+    sync_cout << "sample" << "," << "visits_Ne6" << "," << "qValue_Ne6" << sync_endl;
+
     for (size_t i = 0; i < searchSettings->threads; ++i) {
         searchThreads[i]->set_root_node(rootNode);
         searchThreads[i]->set_search_limits(searchLimits);

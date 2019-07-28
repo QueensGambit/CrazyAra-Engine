@@ -57,6 +57,8 @@ private:
     unordered_map<Key, Node*> *hashTable;
     SearchSettings* searchSettings;
     SearchLimits* searchLimits;
+    bool found = false;
+    bool foundQ = false;
 
     /**
      * @brief get_new_child_to_evaluate Traverses the search tree beginning from the root node and returns the prarent node and child index for the next node to expand.
@@ -103,13 +105,15 @@ private:
     inline void copy_node(const unordered_map<Key,Node*>::const_iterator &it, Board* newPos, Node* parentNode, size_t childIdx);
 
 public:
+    size_t threadId;
+
     /**
      * @brief SearchThread
      * @param netBatch Network API object which provides the prediction of the neural network
      * @param searchSettings Given settings for this search run
      * @param hashTable Handle to the hash table
      */
-    SearchThread(NeuralNetAPI* netBatch, SearchSettings* searchSettings, unordered_map<Key, Node*>* hashTable);
+    SearchThread(NeuralNetAPI* netBatch, SearchSettings* searchSettings, unordered_map<Key, Node*>* hashTable, size_t threadId);
 
     /**
      * @brief create_mini_batch Creates a mini-batch of new unexplored nodes.
@@ -122,7 +126,7 @@ public:
     /**
      * @brief thread_iteration Runs multiple mcts-rollouts as long as a new batch is filled
      */
-    void thread_iteration();
+    void thread_iteration(bool print);
 
     /**
      * @brief nodes_limits_ok Checks if the searchLimits based on the amount of nodes to search has been reached.

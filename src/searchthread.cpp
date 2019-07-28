@@ -29,8 +29,8 @@
 #include "uci.h"
 #include "misc.h"
 
-SearchThread::SearchThread(NeuralNetAPI *netBatch, SearchSettings* searchSettings, unordered_map<Key, Node *> *hashTable):
-    netBatch(netBatch), isRunning(false), hashTable(hashTable), searchSettings(searchSettings)
+SearchThread::SearchThread(NeuralNetAPI *netBatch, SearchSettings* searchSettings, unordered_map<Key, Node *> *hashTable, size_t threadId):
+    netBatch(netBatch), isRunning(false), hashTable(hashTable), searchSettings(searchSettings), threadId(threadId)
 {
     // allocate memory for all predictions and results
     inputPlanes = new float[searchSettings->batchSize * NB_VALUES_TOTAL];
@@ -211,7 +211,7 @@ void SearchThread::create_mini_batch()
         parentNode = get_new_child_to_evaluate(childIdx, isCollision, isTerminal, depth);
 
         if(isTerminal) {
-            //            terminalNodes.push_back(parentNode->childNodes[childIdx]);
+//                        terminalNodes.push_back(parentNode->childNodes[childIdx]);
             parentNode->backup_value(childIdx, -parentNode->childNodes[childIdx]->value);
             ++terminalEvents;
         }
@@ -244,7 +244,7 @@ void SearchThread::create_mini_batch()
 
 }
 
-void SearchThread::thread_iteration()
+void SearchThread::thread_iteration(bool print)
 {
     create_mini_batch();
     if (newNodes.size() > 0) {
@@ -254,13 +254,26 @@ void SearchThread::thread_iteration()
     backup_value_outputs();
     backup_collisions();
     rootNode->numberVisits = sum(rootNode->childNumberVisits);
+
+    if (print) {
+        sync_cout << rootNode->numberVisits << "," << rootNode->childNumberVisits[63] << "," << rootNode->qValues[63] << sync_endl;
+    }
+    if (!found && argmax(rootNode->childNumberVisits)== 63) {
+        sync_cout << "N@e6 at" << rootNode->numberVisits << " samples" << sync_endl;
+        found = true;
+    }
+    if (!foundQ && argmax(rootNode->qValues)== 63) {// && rootNode->numberVisits > 400) {
+        sync_cout << "N@e6 highest Q-value at " << rootNode->numberVisits << " samples" << sync_endl;
+//        foundQ = true;
+    }
 }
 
 void go(SearchThread *t)
 {
     t->set_is_running(true);
-
+    size_t i = 0;
     do {
-        t->thread_iteration();
+        t->thread_iteration(t->threadId == 0 && i % 20 == 0);
+        ++i;
     } while(t->get_is_running() && t->nodes_limits_ok());
 }

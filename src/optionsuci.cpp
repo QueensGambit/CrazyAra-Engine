@@ -36,15 +36,15 @@ void OptionsUCI::init(OptionsMap &o)
 
          o["UCI_Variant"]              << Option(availableVariants.front().c_str(), availableVariants);
          o["Search_Type"]              << Option("MCTS", {"MCTS"});
-         o["Context"]                  << Option("CPU", {"CPU", "GPU"});
+         o["Context"]                  << Option("GPU", {"CPU", "GPU"});
          o["Batch_Size"]               << Option(8, 1, 8192);
          o["Threads"]                  << Option(1, 1, 512);
          o["Centi_CPuct_Init"]         << Option(250, 1, 99999);
          o["CPuct_Base"]               << Option(19652, 1, 99999);
-         o["Centi_Dirichlet_Epsilon"]  << Option(25, 1, 99999);
+         o["Centi_Dirichlet_Epsilon"]  << Option(100, 1, 99999);
          o["Centi_Dirichlet_Alpha"]    << Option(20, 1, 99999);
          o["Centi_U_Init"]             << Option(100, 0, 100);
-         o["Centi_U_Min"]              << Option(25, 0, 100);
+         o["Centi_U_Min"]              << Option(100, 0, 100);   // 100
          o["U_Base"]                   << Option(1965, 0, 99999);
          o["Centi_U_Init_Divisor"]     << Option(100, 1, 99999);
          o["Centi_Q_Value_Weight"]     << Option(70, 0, 99999);
@@ -57,9 +57,9 @@ void OptionsUCI::init(OptionsMap &o)
          o["Virtual_Loss"]             << Option(3, 0, 99999);
          o["Nodes"]                    << Option(0, 0, 99999);
          o["Use_Raw_Network"]          << Option(false);
-         o["Enhance_Checks"]           << Option(true);
+         o["Enhance_Checks"]           << Option(true);  // true
          o["Enhance_Captures"]         << Option(false);
-         o["Use_Transposition_Table"]  << Option(true);
+         o["Use_Transposition_Table"]  << Option(false);   // true
 //         o["Model_Architecture_Dir"]   << Option("default");
 //         o["Debug_Log_File"]           << Option("", activate_logger);
 //         o["Contempt"]                 << Option(24, -100, 100);

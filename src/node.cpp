@@ -275,7 +275,9 @@ DynamicVector<float> Node::getQValues() const
 
 void Node::apply_dirichlet_noise_to_prior_policy()
 {
-    DynamicVector<float> dirichlet_noise = get_dirichlet_noise(nbDirectChildNodes, searchSettings->dirichletAlpha);
+//    DynamicVector<float> dirichlet_noise = get_dirichlet_noise(nbDirectChildNodes, searchSettings->dirichletAlpha);
+    DynamicVector<float> dirichlet_noise(nbDirectChildNodes);
+    dirichlet_noise = 1.0f / nbDirectChildNodes;
     policyProbSmall = (1 - searchSettings->dirichletEpsilon ) * policyProbSmall + searchSettings->dirichletEpsilon  * dirichlet_noise;
 }
 
@@ -342,9 +344,9 @@ void Node::setValue(float value)
 
 size_t Node::select_child_node()
 {
-    if (checkmateIdx != -1) {
-        return size_t(checkmateIdx);
-    }
+//    if (checkmateIdx != -1) {
+//        return size_t(checkmateIdx);
+//    }
     // find the move according to the q- and u-values for each move
     // calculate the current u values
     // it's not worth to save the u values as a node attribute because u is updated every time n_sum changes
